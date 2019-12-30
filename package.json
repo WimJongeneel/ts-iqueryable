@@ -1,0 +1,11 @@
+{
+  "name": "ts-queryable",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "repository": "git@github.com:WimJongeneel/ts-iqueryable.git",
+  "author": "wimjjj <wim.jongeneel1@gmail.com>",
+  "devDependencies": {
+    "typescript": "^3.7.4"
+  }
+}
