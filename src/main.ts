@@ -6,22 +6,7 @@ type Expr =
   | { kind: 'val', value: any }
   | { kind: 'acs', id: string }
 
-interface IFilterable<T extends object> {
-  Where(p: (i: Builder<T>) => BoolExprBuilder): IFilterable<T>
-  ToArray(): T[]
-}
-
-interface IAsyncFilterable<T extends object> {
-  Where(p: (i: Builder<T>) => BoolExprBuilder): IAsyncFilterable<T>
-  ToArray(): Promise<T[]>
-}
-
-const FromSync = <T extends object>(f: IFilterable<T>): IAsyncFilterable<T> => ({
-  Where: p => FromSync(f.Where(p)),
-  ToArray: () => Promise.resolve(f.ToArray())
-})
-
-const runExpr = <T>(e: Expr, i: any): any => {
+const runExpr = (e: Expr, i: any): any => {
   if (e.kind == 'acs') return i[e.id]
   if (e.kind == '==') return runExpr(e.left, i) == runExpr(e.rigth, i)
   if (e.kind == 'includes') return runExpr(e.left, i).contains(runExpr(e.rigth, i))
@@ -29,7 +14,12 @@ const runExpr = <T>(e: Expr, i: any): any => {
   if (e.kind == 'val') return e.value
 }
 
-const FromArray = <T extends object>(a: Array<T>): IFilterable<T> => {
+interface IQueryable<T extends object> {
+  Where(p: (i: Builder<T>) => BoolExprBuilder): IQueryable<T>
+  ToArray(): Promise<T[]>
+}
+
+const FromArray = <T extends object>(a: Array<T>): IQueryable<T> => {
   const exprs: Expr[] = []
   const value = [...a]
 
@@ -39,7 +29,7 @@ const FromArray = <T extends object>(a: Array<T>): IFilterable<T> => {
       return this
     },
     ToArray() {
-      return exprs.reduce((res, e) => res.filter(i => runExpr(e, i)), value)
+      return Promise.resolve(exprs.reduce((res, e) => res.filter(i => runExpr(e, i)), value))
     }
   }
 }
@@ -52,7 +42,7 @@ const compileOdata = (e: Expr): string => {
   if (e.kind == 'val') return typeof e.value == 'string' ? `'${e.value}'` : e.value
 }
 
-const odata = <T extends object>(name: string, baseuri = '/odata'): IAsyncFilterable<T> => {
+const odata = <T extends object>(name: string, baseuri = '/odata'): IQueryable<T> => {
 
   const exprs: Expr[] = []
 
