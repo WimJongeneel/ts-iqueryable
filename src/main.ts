@@ -3,13 +3,14 @@ type Expr =
   | { kind: '==', left: Expr, rigth: Expr }
   | { kind: 'includes', left: Expr, rigth: Expr }
   | { kind: '&&', left: Expr, rigth: Expr }
+  | { kind: "||"; left: Expr; right: Expr }
   | { kind: 'val', value: any }
   | { kind: 'acs', id: string }
 
 const runExpr = (e: Expr, i: any): any => {
   if (e.kind == 'acs') return i[e.id]
   if (e.kind == '==') return runExpr(e.left, i) == runExpr(e.rigth, i)
-  if (e.kind == 'includes') return runExpr(e.left, i).contains(runExpr(e.rigth, i))
+  if (e.kind == 'includes') return runExpr(e.left, i).includes(runExpr(e.rigth, i))
   if (e.kind == '&&') return runExpr(e.left, i) && runExpr(e.rigth, i)
   if (e.kind == 'val') return e.value
 }
@@ -94,6 +95,10 @@ class ExprBuilder {
     return new ExprBuilder((createBinaryExpression('&&', this.ast, e.getExpr())))
   }
 
+  or(e: ExprBuilder) {
+    return new ExprBuilder(createBinaryExpression("||", this.ast, e.getExpr()))
+  }
+
   includes(e: ExprBuilder | string) {
     if (typeof e == 'string')
       return new ExprBuilder(createBinaryExpression('includes', this.ast, createValExpression(e)))
@@ -106,7 +111,7 @@ const createValExpression = <T>(v: any): Expr => ({
   value: v
 })
 
-const createBinaryExpression = <T>(kind: '==' | 'includes' | '&&', left: Expr, rigth: Expr): Expr => ({
+const createBinaryExpression = <T>(kind: '==' | 'includes' | '&&', | '||',, left: Expr, rigth: Expr): Expr => ({
   kind, left, rigth
 })
 
@@ -119,6 +124,7 @@ interface StringExprBuilder {
 interface BoolExprBuilder {
   equals(s: boolean | BoolExprBuilder): BoolExprBuilder
   and(e: BoolExprBuilder): BoolExprBuilder
+  or(e: BoolExprBuilder): BoolExprBuilder
   getExpr(): Expr
 }
 
@@ -142,6 +148,7 @@ FromArray<Blog>([
   { Id: 1, Title: 'Blog 1' },
   { Id: 2, Title: 'Blog 2' },
   { Id: 3, Title: 'Blog 3' },
-])
-  .Where(b => b.Id.equals(1).and(b.Title.includes('Hello')))
+]).Where(b => b.Id.equals(1)
+    .or(b.Id.equals(2))
+    .and(b.Title.includes('Blog')))
   .ToArray()
